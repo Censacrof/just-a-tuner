@@ -12,13 +12,19 @@ public class Tuner {
     static final int SAMPLE_RATE = 44100;
     static final int CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO;
     static final int AUDIO_FORMAT = AudioFormat.ENCODING_PCM_FLOAT;
-    static final int BUFFER_SIZE = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT) * 4;
+    static final int BUFFER_SIZE = 4 * AudioRecord.getMinBufferSize(
+            SAMPLE_RATE,
+            CHANNEL_CONFIG,
+            AUDIO_FORMAT
+    );
 
-    private AudioRecord audioRecord;
+    static final float CHUNK_DURATION = 0.2f;
+    static final int CHUNK_SIZE = (int) (SAMPLE_RATE * CHUNK_DURATION);
+
+    private final AudioRecord audioRecord;
+    private final float[] chunk;
 
     private Thread audioFetcherThread;
-    private AudioFetcher audioFetcher;
-    private boolean audioFetcherAlive = false;
 
     public Tuner() throws SecurityException {
         audioRecord = new AudioRecord(
@@ -31,61 +37,73 @@ public class Tuner {
 
         if (audioRecord.getState() != AudioRecord.STATE_INITIALIZED)
             throw new UnsupportedOperationException("Error initializing AudioRecord");
+
+        chunk = new float[CHUNK_SIZE];
+    }
+
+    @Override
+    public void finalize() {
+        audioRecord.stop();
+        audioRecord.release();
     }
 
     public void start() {
-        if (audioFetcherAlive)
+        if (audioFetcherThread != null && audioFetcherThread.isAlive())
             return;
 
-        audioFetcher = new AudioFetcher(audioRecord);
-        audioFetcherThread = new Thread(audioFetcher);
+        audioFetcherThread = new Thread(new AudioFetcher(audioRecord, chunk));
         audioFetcherThread.start();
-        audioFetcherAlive = true;
     }
 
     public void stop() {
-        if (!audioFetcherAlive)
+        if (audioFetcherThread == null)
+            return;
+        if (!audioFetcherThread.isAlive())
             return;
 
-        audioFetcherAlive = false;
         audioFetcherThread.interrupt();
         try {
             audioFetcherThread.join();
         }
         catch (InterruptedException e) {
-            return;
+            Log.i(TAG, "AudioFetcher was interrupted");
         }
     }
 
     private static class AudioFetcher implements Runnable {
-        private boolean shouldStop;
         private final String TAG = "AudioFetcher";
-        private AudioRecord audioRecord;
-        private final float N_SECONDS = 0.5f;
+        private final AudioRecord audioRecord;
+        private final float[] chunk;
 
-        public AudioFetcher(AudioRecord audioRecord) {
-            shouldStop = false;
+        public AudioFetcher(AudioRecord audioRecord, float[] chunk) {
             this.audioRecord = audioRecord;
+            this.chunk = chunk;
         }
 
         public void run() {
+            Log.i(TAG,"Started");
             audioRecord.startRecording();
-            Log.v(TAG,"Started");
 
-            final int nData = (int) ((float)(audioRecord.getSampleRate()) * N_SECONDS);
-            float[] audioData = new float[nData];
-
-            try {
-                while (true) {
-                    int nRead = audioRecord.read(audioData, 0, audioData.length, AudioRecord.READ_BLOCKING);
-                    Log.v(TAG, "Read " + nRead + " values");
-                    Thread.sleep(1);
+            while (!Thread.currentThread().isInterrupted()) {
+                int nRead;
+                synchronized (chunk) {
+                    nRead = audioRecord.read(
+                            chunk,
+                            0,
+                            chunk.length,
+                            AudioRecord.READ_BLOCKING
+                    );
                 }
-            } catch (InterruptedException e) {
-                Log.v(TAG,"Stopped");
+
+                StringBuilder str = new StringBuilder();
+                for (float f: chunk) {
+                    str.append(f).append(", ");
+                }
+                Log.v(TAG, "Read " + nRead + " values: " + str.toString());
             }
 
             audioRecord.stop();
+            Log.i(TAG,"Stopped");
         }
     }
 }
