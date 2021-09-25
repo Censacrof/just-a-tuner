@@ -11,16 +11,17 @@ import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
-import androidx.navigation.fragment.NavHostFragment;
 
 import com.censacrof.justatuner.databinding.FragmentFirstBinding;
+
+import java.util.ArrayList;
 
 public class FirstFragment extends Fragment {
 
     private FragmentFirstBinding binding;
-    private String[] permissionsRequired = {Manifest.permission.RECORD_AUDIO};
+    private final String[] permissionsRequired = {Manifest.permission.RECORD_AUDIO};
     private final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
-    private Tuner tuner;
+    private AudioFetcher audioFetcher;
 
     @Override
     public View onCreateView(
@@ -36,7 +37,7 @@ public class FirstFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         requestMicPermission();
-        tuner = new Tuner();
+        audioFetcher = new AudioFetcher();
 
         binding.buttonStart.setOnClickListener(event -> startRecording());
         binding.buttonStop.setOnClickListener(event -> stopRecording());
@@ -54,13 +55,38 @@ public class FirstFragment extends Fragment {
         }
     }
 
+    Thread viewUpdaterThread;
     private void startRecording() {
+        if (viewUpdaterThread != null && viewUpdaterThread.isAlive())
+            return;
+
         requestMicPermission();
-        tuner.start();
+        audioFetcher.start();
+
+        viewUpdaterThread = new Thread(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                float[] chunk = audioFetcher.getChunk();
+
+                ArrayList<Float> samples = new ArrayList<>();
+                for (float f: chunk) {
+                    samples.add(f);
+                }
+
+                binding.graphView.setSamples(samples);
+            }
+        });
+
+        viewUpdaterThread.start();
     }
 
     private void stopRecording() {
-        tuner.stop();
+        if (viewUpdaterThread == null)
+            return;
+        if (!viewUpdaterThread.isAlive())
+            return;
+
+        viewUpdaterThread.interrupt();
+        audioFetcher.stop();
     }
 
     @Override
