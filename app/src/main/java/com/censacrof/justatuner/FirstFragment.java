@@ -14,6 +14,8 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.censacrof.justatuner.databinding.FragmentFirstBinding;
+import com.github.psambit9791.jdsp.signal.CrossCorrelation;
+import com.github.psambit9791.jdsp.signal.Decimate;
 
 public class FirstFragment extends Fragment {
 
@@ -64,16 +66,38 @@ public class FirstFragment extends Fragment {
             audioFetcher.getChunk();
 
         viewUpdaterThread = new Thread(() -> {
-            // int count = 0;
-            while (!Thread.currentThread().isInterrupted()) {
-                float[] chunk = audioFetcher.getChunk();
-                binding.graphView.setSamples(chunk);
+            final String TAG = "viewUpdaterThread";
 
-                /*count++;
-                if (count > 3);
-                    break;*/
+            while (!Thread.currentThread().isInterrupted()) {
+                double[] chunk = audioFetcher.getChunk();
+
+                final int downSamplingFactor = 8;
+                chunk = new Decimate(chunk, AudioFetcher.SAMPLE_RATE, true)
+                        .decimate(downSamplingFactor);
+
+                Log.d(TAG, "Decimated size: " + chunk.length);
+
+                CrossCorrelation cc = new CrossCorrelation(chunk);
+                double[] autoCorrelated = cc.crossCorrelate("full");
+                binding.graphView.setSamples(autoCorrelated);
+
+                double highestPeak = 0;
+                double highestPeakPeriod = 0;
+                int zeroIndex = autoCorrelated.length / 2;
+                for (int i = autoCorrelated.length / 2 + 10; i < autoCorrelated.length - 1; i++) {
+                    if (autoCorrelated[i - 1] < autoCorrelated[i]
+                            && autoCorrelated[i + 1]  < autoCorrelated[i]) {
+                        //Log.d(TAG, "Peak at i = " + i);
+                        if (autoCorrelated[i] > highestPeak) {
+                            highestPeak = autoCorrelated[i];
+                            highestPeakPeriod = (i - zeroIndex) * downSamplingFactor / (float) AudioFetcher.SAMPLE_RATE ;
+                        }
+                    }
+                }
+
+                Log.i(TAG, "Highest peak period: " + highestPeakPeriod + " (" + (1/highestPeakPeriod) + "hz)");
             }
-            Log.i("viewUpdaterThread", "stopped");
+            Log.i(TAG, "stopped");
         });
 
         viewUpdaterThread.start();

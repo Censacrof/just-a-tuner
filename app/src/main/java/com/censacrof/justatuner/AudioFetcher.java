@@ -57,7 +57,7 @@ public class AudioFetcher {
         audioRecord.stop();
     }
 
-    public float[] getChunk() {
+    public double[] getChunk() {
         if (!isRecording)
             throw new IllegalStateException("AudioRecord is not recording");
 
@@ -70,7 +70,12 @@ public class AudioFetcher {
             str.append(f).append(", ");
         Log.i(TAG, chunk.length + " samples: " + str.toString());*/
 
-        return chunk.clone();
+        double[] chunkDouble = new double[chunk.length];
+        for (int i = 0; i < chunk.length; i++) {
+            chunkDouble[i] = (double) chunk[i];
+        }
+
+        return chunkDouble;
     }
 
     @Override

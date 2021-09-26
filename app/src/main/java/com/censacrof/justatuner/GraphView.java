@@ -31,7 +31,7 @@ public class GraphView
     private Thread drawingThread;
     private SurfaceHolder surfaceHolder;
     private boolean canDraw = false;
-    private float[] samples;
+    private double[] samples;
 
     public GraphView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -59,7 +59,7 @@ public class GraphView
     }
 
 
-    public void setSamples(float[] chunk) {
+    public void setSamples(double[] chunk) {
         samples = chunk;
     }
 
@@ -139,15 +139,15 @@ public class GraphView
                         0.5f
                 ));
 
-                float maxY = 10f * HEIGHT / 2f;
+                float maxY = 0.9f * HEIGHT / 2f;
                 if (samples != null && samples.length > 1) {
                     float dx = WIDTH / (samples.length - 1);
 
                     canvas.translate(0, HEIGHT/2f);
                     Path path = new Path();
-                    path.moveTo(0, maxY * samples[0]);
+                    path.moveTo(0, maxY * (float) samples[0]);
                     for (int i = 1; i < samples.length; i++) {
-                        path.lineTo(dx * i, maxY * samples[i]);
+                        path.lineTo(dx * i, maxY * (float) samples[i]);
                     }
                     canvas.drawPath(path, linePaint);
                 }
