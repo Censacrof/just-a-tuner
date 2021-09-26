@@ -65,11 +65,6 @@ public class AudioFetcher {
         if (nRead < 0)
             throw new RuntimeException("AudioRecord read returned error number " + nRead);
 
-        /*StringBuilder str = new StringBuilder();
-        for (float f: chunk)
-            str.append(f).append(", ");
-        Log.i(TAG, chunk.length + " samples: " + str.toString());*/
-
         double[] chunkDouble = new double[chunk.length];
         for (int i = 0; i < chunk.length; i++) {
             chunkDouble[i] = (double) chunk[i];

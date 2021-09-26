@@ -68,34 +68,13 @@ public class FirstFragment extends Fragment {
         viewUpdaterThread = new Thread(() -> {
             final String TAG = "viewUpdaterThread";
 
+            Tuner tuner = new Tuner();
             while (!Thread.currentThread().isInterrupted()) {
                 double[] chunk = audioFetcher.getChunk();
+                tuner.analyzeChunk(chunk, audioFetcher.SAMPLE_RATE, 8);
 
-                final int downSamplingFactor = 8;
-                chunk = new Decimate(chunk, AudioFetcher.SAMPLE_RATE, true)
-                        .decimate(downSamplingFactor);
-
-                Log.d(TAG, "Decimated size: " + chunk.length);
-
-                CrossCorrelation cc = new CrossCorrelation(chunk);
-                double[] autoCorrelated = cc.crossCorrelate("full");
-                binding.graphView.setSamples(autoCorrelated);
-
-                double highestPeak = 0;
-                double highestPeakPeriod = 0;
-                int zeroIndex = autoCorrelated.length / 2;
-                for (int i = autoCorrelated.length / 2 + 10; i < autoCorrelated.length - 1; i++) {
-                    if (autoCorrelated[i - 1] < autoCorrelated[i]
-                            && autoCorrelated[i + 1]  < autoCorrelated[i]) {
-                        //Log.d(TAG, "Peak at i = " + i);
-                        if (autoCorrelated[i] > highestPeak) {
-                            highestPeak = autoCorrelated[i];
-                            highestPeakPeriod = (i - zeroIndex) * downSamplingFactor / (float) AudioFetcher.SAMPLE_RATE ;
-                        }
-                    }
-                }
-
-                Log.i(TAG, "Highest peak period: " + highestPeakPeriod + " (" + (1/highestPeakPeriod) + "hz)");
+                binding.graphView.setSamples(tuner.getAutoCorrelated());
+                Log.i(TAG, "Dominant frequency: " + tuner.getFrequency() + "Hz");
             }
             Log.i(TAG, "stopped");
         });
