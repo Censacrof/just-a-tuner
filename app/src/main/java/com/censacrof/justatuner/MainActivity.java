@@ -2,6 +2,7 @@ package com.censacrof.justatuner;
 
 import android.os.Bundle;
 
+import com.censacrof.justatuner.databinding.ActivityMainBinding;
 import com.google.android.material.snackbar.Snackbar;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -12,8 +13,6 @@ import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
-
-import com.censacrof.justatuner.databinding.ActivityMainBinding;
 
 import android.view.Menu;
 import android.view.MenuItem;
