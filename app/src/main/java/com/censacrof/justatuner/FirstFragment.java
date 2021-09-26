@@ -71,10 +71,10 @@ public class FirstFragment extends Fragment {
             Tuner tuner = new Tuner();
             while (!Thread.currentThread().isInterrupted()) {
                 double[] chunk = audioFetcher.getChunk();
-                tuner.analyzeChunk(chunk, audioFetcher.SAMPLE_RATE, 8);
+                tuner.analyzeChunk(chunk, audioFetcher.SAMPLE_RATE, 1);
 
                 binding.graphView.setSamples(tuner.getAutoCorrelated());
-                Log.i(TAG, "Dominant frequency: " + tuner.getFrequency() + "Hz");
+                Log.i(TAG, "Dominant frequency: " + tuner.getNote() + "Hz");
             }
             Log.i(TAG, "stopped");
         });
