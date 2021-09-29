@@ -11,8 +11,8 @@ public class Tuner {
     private Tone tone;
     private double[] autoCorrelated;
 
-    private final double A4_FREQ = 440.0;
-    private final double BASE = Math.pow(2, 1d/12d);
+    private static final double A4_FREQ = 440.0;
+    private static final double BASE = Math.pow(2, 1d/12d);
 
     public static final String[] SCALE_NOTE_NAMES = {
         "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"
@@ -28,18 +28,12 @@ public class Tuner {
         public final double error;
 
         public Tone(String name, double frequency) {
-            this(name, frequency, 0);
-        }
-
-        public Tone(Tone other, double error) {
-            this(other.name, other.frequency, error);
-        }
-
-        public Tone(String name, double frequency, double error) {
             this.name = name;
             this.frequency = frequency;
-            this.stepsFromA4 = Math.log(frequency / A4_FREQ) / Math.log(BASE);
-            this.error = error;
+            this.stepsFromA4 = frequencyToSteps(frequency);
+            this.error = stepsFromA4 >= 0
+                    ? stepsFromA4 - Math.floor(stepsFromA4)
+                    : stepsFromA4 + Math.ceil(stepsFromA4);
         }
 
         @Override
@@ -57,8 +51,12 @@ public class Tuner {
         }
     };
 
-    private double noteToFrequency(int stepsFromA4) {
+    public static double stepsToFrequency(double stepsFromA4) {
         return A4_FREQ * Math.pow(BASE, stepsFromA4);
+    }
+
+    public static double frequencyToSteps(double frequency) {
+        return Math.log(frequency/A4_FREQ) / Math.log(BASE);
     }
 
     public Tone identifyNote(double frequency) {
@@ -67,13 +65,13 @@ public class Tuner {
             Tone upper = NOTES[i + 1];
 
             if (lower.frequency <= frequency && frequency <= upper.frequency) {
-                double steps = Math.log(frequency / A4_FREQ) / Math.log(BASE);
+                double steps = Tuner.frequencyToSteps(frequency);
                 double fract = steps - Math.floor(steps);
 
                 if (fract < 0.5)
-                    return new Tone(lower, fract);
+                    return new Tone(lower.name, frequency);
                 else
-                    return new Tone(upper, fract - 1);
+                    return new Tone(upper.name, frequency);
             }
         }
 
@@ -87,7 +85,7 @@ public class Tuner {
             NOTES[i] =  new Tone(
                     SCALE_NOTE_NAMES[Math.floorMod(stepsFromA4, SCALE_NOTE_NAMES.length)]
                             + (4 + (stepsFromA4 - 3)/ SCALE_NOTE_NAMES.length),
-                    noteToFrequency(stepsFromA4)
+                    stepsToFrequency(stepsFromA4)
             );
         }
     }
@@ -124,6 +122,9 @@ public class Tuner {
                 }
             }
         }
+
+        if (highestPeak < autoCorrelated[autoCorrelated.length / 2] * 0.8)
+            return;
 
         double frequency = 1f / (float) highestPeakPeriod;
         tone = identifyNote(frequency);

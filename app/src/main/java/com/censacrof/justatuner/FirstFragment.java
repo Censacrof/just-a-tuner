@@ -68,12 +68,20 @@ public class FirstFragment extends Fragment {
         viewUpdaterThread = new Thread(() -> {
             final String TAG = "viewUpdaterThread";
 
+            /* a = 157.43;
+            double b = Tuner.frequencyToSteps(a);
+            double c = Tuner.stepsToFrequency(b);
+            Log.d(TAG, String.format("a: %.2f; b: %.2f c: %.2f", a, b, c));*/
+
+
             Tuner tuner = new Tuner();
             while (!Thread.currentThread().isInterrupted()) {
                 double[] chunk = audioFetcher.getChunk();
                 tuner.analyzeChunk(chunk, audioFetcher.SAMPLE_RATE, 1);
+                requireActivity().runOnUiThread(() -> {
+                    binding.tunerView.setTargetTone(tuner.getNote(), 500);
+                });
 
-                binding.graphView.setSamples(tuner.getAutoCorrelated());
                 Log.i(TAG, "Dominant frequency: " + tuner.getNote() + "Hz");
             }
             Log.i(TAG, "stopped");

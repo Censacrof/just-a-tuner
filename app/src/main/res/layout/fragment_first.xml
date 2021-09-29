@@ -38,13 +38,14 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textview_freq" />
 
-    <com.censacrof.justatuner.GraphView
-        android:id="@+id/graphView"
-        android:layout_width="341dp"
-        android:layout_height="467dp"
+    <com.censacrof.justatuner.TunerView
+        android:id="@+id/tunerView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/button_start"
-        app:layout_constraintVertical_bias="0.478" />
+        app:layout_constraintVertical_bias="0.438" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

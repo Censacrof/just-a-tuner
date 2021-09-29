@@ -1,6 +1,5 @@
 package com.censacrof.justatuner;
 
-import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.Resources;
@@ -10,19 +9,13 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.text.TextPaint;
 import android.util.AttributeSet;
-import android.util.Log;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
 import android.view.View;
-import android.view.animation.Animation;
-
-import java.time.Duration;
-import java.time.Instant;
 
 public class TunerView extends View {
     private final String TAG = "TunerView";
 
-    private ValueAnimator merryGoRoundAnimator;
+    private float currentStepsToA4Mod = 0;
+    private ValueAnimator stepsToA4Animator;
 
     private final TextPaint textPaint;
     private final TextPaint sharpPaint;
@@ -31,8 +24,6 @@ public class TunerView extends View {
     private final Paint precisionCirclePaint;
     private final Paint precisionArrowPaint;
 
-    private Paint backgroundPaint;
-    float stepsFromA4 = 0;
 
     public TunerView(Context context, AttributeSet attributeSet) {
         super(context, attributeSet);
@@ -63,17 +54,36 @@ public class TunerView extends View {
         precisionCirclePaint = new Paint();
         precisionCirclePaint.setColor(Color.BLACK);
 
-        merryGoRoundAnimator = ValueAnimator.ofFloat(0f, Tuner.SCALE_NOTE_NAMES.length);
-        merryGoRoundAnimator.setDuration(10000);
-        merryGoRoundAnimator.setRepeatCount(Animation.INFINITE);
-        merryGoRoundAnimator.addUpdateListener((ValueAnimator updatedAnimation) -> {
-            stepsFromA4 = (float) updatedAnimation.getAnimatedValue();
-            postInvalidateOnAnimation();
-        });
-        merryGoRoundAnimator.start();
+
 
         if (isInEditMode())
             return;
+    }
+
+    public void setTargetTone(Tuner.Tone tone, int animationDurationMillis) {
+        if (tone == null)
+            return;
+
+        if (stepsToA4Animator != null)
+            stepsToA4Animator.cancel();
+
+        float target = (float) tone.stepsFromA4;
+
+        // target mod Tuner.SCALE_NOTE_NAMES.length
+        while (target < 0) target += Tuner.SCALE_NOTE_NAMES.length;
+        while (target >= Tuner.SCALE_NOTE_NAMES.length) target += Tuner.SCALE_NOTE_NAMES.length;
+
+        stepsToA4Animator = ValueAnimator.ofFloat(
+                currentStepsToA4Mod,
+                target
+        );
+
+        stepsToA4Animator.addUpdateListener((ValueAnimator updatedAnimation) -> {
+            currentStepsToA4Mod = (float) updatedAnimation.getAnimatedValue();
+            postInvalidateOnAnimation();
+        });
+        stepsToA4Animator.setDuration(animationDurationMillis);
+        stepsToA4Animator.start();
     }
 
     @Override
@@ -86,7 +96,7 @@ public class TunerView extends View {
         drawPrecisionLevel(canvas);
 
         if (!isInEditMode())
-            stepsFromA4 += 0.0025;
+            currentStepsToA4Mod += 0.0025;
     }
 
     private void drawNotesCircle(Canvas canvas) {
@@ -103,7 +113,7 @@ public class TunerView extends View {
         float radius = WIDTH_HALF * 1.2f;
         float dTheta = ((float) Math.PI * 2f) / Tuner.SCALE_NOTE_NAMES.length;
         float tiltFactor = 0.3f;
-        float phase = (float) stepsFromA4 * dTheta;
+        float phase = (float) -currentStepsToA4Mod * dTheta;
         for (int i = 0; i < Tuner.SCALE_NOTE_NAMES.length; i++) {
             //
             float px = WIDTH_HALF + (float) Math.sin(i * dTheta + phase) * radius;
@@ -152,7 +162,8 @@ public class TunerView extends View {
         float linetBottom = lineCenter + lineLength / 2f;
 
         canvas.drawLine(WIDTH_HALF, lineTop, WIDTH_HALF, linetBottom, precisionLinePaint);
-        float fractStepsFromA4 = 0.5f + stepsFromA4 - (float) Math.floor(0.5 + stepsFromA4);
+        float fractStepsFromA4 = 0.5f - currentStepsToA4Mod
+                - (float) Math.floor(0.5 - currentStepsToA4Mod);
 
         float py = lineTop;
         if (fractStepsFromA4 < 0.5) {
@@ -163,7 +174,6 @@ public class TunerView extends View {
 
 
         float alpha = 255 * (1 - 2 * Math.abs(fractStepsFromA4 - 0.5f));
-        Log.d(TAG, "Alpha " + alpha);
         precisionCirclePaint.setAlpha((int) alpha);
         canvas.drawCircle(WIDTH_HALF, py, 20, precisionCirclePaint);
 
