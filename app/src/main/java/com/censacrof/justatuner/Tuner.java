@@ -14,7 +14,7 @@ public class Tuner {
     private final double A4_FREQ = 440.0;
     private final double BASE = Math.pow(2, 1d/12d);
 
-    private final String[] SCALE_NOTE_NAMES = {
+    public static final String[] SCALE_NOTE_NAMES = {
         "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"
     };
 
