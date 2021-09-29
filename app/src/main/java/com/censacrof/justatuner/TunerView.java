@@ -5,8 +5,10 @@ import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.text.TextPaint;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -15,9 +17,14 @@ import java.time.Duration;
 import java.time.Instant;
 
 public class TunerView extends View {
+    private final String TAG = "TunerView";
+
     private final TextPaint textPaint;
     private final TextPaint sharpPaint;
+    private final Paint linePaint;
     private final Paint precisionLinePaint;
+    private final Paint precisionCirclePaint;
+    private final Paint precisionArrowPaint;
 
     private Paint backgroundPaint;
     float stepsFromA4 = 0;
@@ -35,9 +42,21 @@ public class TunerView extends View {
         sharpPaint = new TextPaint(textPaint);
         sharpPaint.setColor(Color.argb(255, 125, 125, 125));
 
-        precisionLinePaint = new Paint();
-        precisionLinePaint.setStrokeWidth(10);
-        precisionLinePaint.setStrokeCap(Paint.Cap.ROUND);
+        linePaint = new Paint();
+        linePaint.setStrokeWidth(5);
+        linePaint.setStrokeCap(Paint.Cap.ROUND);
+        linePaint.setColor(Color.BLACK);
+
+        precisionLinePaint = new Paint(linePaint);
+        precisionLinePaint.setColor(Color.argb(255, 125, 125, 125));
+
+        precisionArrowPaint = new Paint();
+        precisionArrowPaint.setAntiAlias(true);
+        precisionArrowPaint.setStyle(Paint.Style.FILL_AND_STROKE);
+        precisionArrowPaint.setColor(Color.BLACK);
+
+        precisionCirclePaint = new Paint();
+        precisionCirclePaint.setColor(Color.BLACK);
 
         if (isInEditMode())
             return;
@@ -54,7 +73,7 @@ public class TunerView extends View {
         drawPrecisionLevel(canvas);
 
         if (!isInEditMode())
-            stepsFromA4 += 0.025;
+            stepsFromA4 += 0.0025;
     }
 
     private void drawNotesCircle(Canvas canvas) {
@@ -93,7 +112,18 @@ public class TunerView extends View {
                 sharpPaint.setTextSize(textSize / 2f);
                 canvas.drawText("#", px + textSize / 2.5f, py - textSize / 2f, sharpPaint);
             }
+
+            float y1 = py + textSize * 0.25f;
+            float y2 = y1 + textSize * 0.1f;
+            canvas.drawLine(px, y1, px, y2, precisionLinePaint);
         }
+
+        Path path = new Path();
+        path.moveTo(WIDTH_HALF, HEIGHT_HALF + maxTextSize * 1.3f);
+        path.lineTo(WIDTH_HALF - 10f, HEIGHT_HALF + maxTextSize * 1.6f);
+        path.lineTo(WIDTH_HALF + 10f, HEIGHT_HALF + maxTextSize * 1.6f);
+        path.close();
+        canvas.drawPath(path, precisionArrowPaint);
     }
 
     private void drawPrecisionLevel(Canvas canvas) {
@@ -109,7 +139,7 @@ public class TunerView extends View {
         float linetBottom = lineCenter + lineLength / 2f;
 
         canvas.drawLine(WIDTH_HALF, lineTop, WIDTH_HALF, linetBottom, precisionLinePaint);
-        float fractStepsFromA4 = stepsFromA4 - (float) Math.floor(stepsFromA4);
+        float fractStepsFromA4 = 0.5f + stepsFromA4 - (float) Math.floor(0.5 + stepsFromA4);
 
         float py = lineTop;
         if (fractStepsFromA4 < 0.5) {
@@ -118,6 +148,24 @@ public class TunerView extends View {
             py += fractStepsFromA4 * lineLength;
         }
 
-        canvas.drawCircle(WIDTH_HALF, py, 20, sharpPaint);
+
+        float alpha = 255 * (1 - 2 * Math.abs(fractStepsFromA4 - 0.5f));
+        Log.d(TAG, "Alpha " + alpha);
+        precisionCirclePaint.setAlpha((int) alpha);
+        canvas.drawCircle(WIDTH_HALF, py, 20, precisionCirclePaint);
+
+        Path arrowPath = new Path();
+        arrowPath.moveTo(WIDTH_HALF - 40, lineCenter);
+        arrowPath.lineTo(WIDTH_HALF - 70, lineCenter - 10);
+        arrowPath.lineTo(WIDTH_HALF - 70, lineCenter + 10);
+        arrowPath.close();
+        canvas.drawPath(arrowPath, precisionArrowPaint);
+
+        arrowPath = new Path();
+        arrowPath.moveTo(WIDTH_HALF + 40, lineCenter);
+        arrowPath.lineTo(WIDTH_HALF + 70, lineCenter - 10);
+        arrowPath.lineTo(WIDTH_HALF + 70, lineCenter + 10);
+        arrowPath.close();
+        canvas.drawPath(arrowPath, precisionArrowPaint);
     }
 }
