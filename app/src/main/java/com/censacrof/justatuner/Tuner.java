@@ -8,7 +8,7 @@ import java.util.Locale;
 public class Tuner {
     private final String TAG = "Tuner";
 
-    private Note note;
+    private Tone tone;
     private double[] autoCorrelated;
 
     private final double A4_FREQ = 440.0;
@@ -19,24 +19,26 @@ public class Tuner {
     };
 
     private final int N_OCTAVES = 8;
-    private final Note[] NOTES = new Note[N_OCTAVES * SCALE_NOTE_NAMES.length];
+    private final Tone[] NOTES = new Tone[N_OCTAVES * SCALE_NOTE_NAMES.length];
 
-    public class Note {
+    public class Tone {
         public final String name;
+        public final double stepsFromA4;
         public final double frequency;
         public final double error;
 
-        public Note(String name, double frequency) {
+        public Tone(String name, double frequency) {
             this(name, frequency, 0);
         }
 
-        public Note(Note other, double error) {
+        public Tone(Tone other, double error) {
             this(other.name, other.frequency, error);
         }
 
-        public Note(String name, double frequency, double error) {
+        public Tone(String name, double frequency, double error) {
             this.name = name;
             this.frequency = frequency;
+            this.stepsFromA4 = Math.log(frequency / A4_FREQ) / Math.log(BASE);
             this.error = error;
         }
 
@@ -59,19 +61,19 @@ public class Tuner {
         return A4_FREQ * Math.pow(BASE, stepsFromA4);
     }
 
-    public Note identifyNote(double frequency) {
+    public Tone identifyNote(double frequency) {
         for (int i = 0; i < NOTES.length - 1; i++) {
-            Note lower = NOTES[i];
-            Note upper = NOTES[i + 1];
+            Tone lower = NOTES[i];
+            Tone upper = NOTES[i + 1];
 
             if (lower.frequency <= frequency && frequency <= upper.frequency) {
                 double steps = Math.log(frequency / A4_FREQ) / Math.log(BASE);
                 double fract = steps - Math.floor(steps);
 
                 if (fract < 0.5)
-                    return new Note(lower, fract);
+                    return new Tone(lower, fract);
                 else
-                    return new Note(upper, fract - 1);
+                    return new Tone(upper, fract - 1);
             }
         }
 
@@ -82,7 +84,7 @@ public class Tuner {
         for (int i = 0; i < NOTES.length; i++) {
             int stepsFromA4 = i - NOTES.length / 2;
 
-            NOTES[i] =  new Note(
+            NOTES[i] =  new Tone(
                     SCALE_NOTE_NAMES[Math.floorMod(stepsFromA4, SCALE_NOTE_NAMES.length)]
                             + (4 + (stepsFromA4 - 3)/ SCALE_NOTE_NAMES.length),
                     noteToFrequency(stepsFromA4)
@@ -90,8 +92,8 @@ public class Tuner {
         }
     }
 
-    public Note getNote() {
-        return note;
+    public Tone getNote() {
+        return tone;
     }
 
     public double[] getAutoCorrelated() {
@@ -124,6 +126,6 @@ public class Tuner {
         }
 
         double frequency = 1f / (float) highestPeakPeriod;
-        note = identifyNote(frequency);
+        tone = identifyNote(frequency);
     }
 }
