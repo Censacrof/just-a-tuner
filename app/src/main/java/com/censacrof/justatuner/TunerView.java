@@ -1,5 +1,7 @@
 package com.censacrof.justatuner;
 
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Canvas;
@@ -12,12 +14,15 @@ import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.animation.Animation;
 
 import java.time.Duration;
 import java.time.Instant;
 
 public class TunerView extends View {
     private final String TAG = "TunerView";
+
+    private ValueAnimator merryGoRoundAnimator;
 
     private final TextPaint textPaint;
     private final TextPaint sharpPaint;
@@ -58,6 +63,15 @@ public class TunerView extends View {
         precisionCirclePaint = new Paint();
         precisionCirclePaint.setColor(Color.BLACK);
 
+        merryGoRoundAnimator = ValueAnimator.ofFloat(0f, Tuner.SCALE_NOTE_NAMES.length);
+        merryGoRoundAnimator.setDuration(10000);
+        merryGoRoundAnimator.setRepeatCount(Animation.INFINITE);
+        merryGoRoundAnimator.addUpdateListener((ValueAnimator updatedAnimation) -> {
+            stepsFromA4 = (float) updatedAnimation.getAnimatedValue();
+            postInvalidateOnAnimation();
+        });
+        merryGoRoundAnimator.start();
+
         if (isInEditMode())
             return;
     }
@@ -65,7 +79,6 @@ public class TunerView extends View {
     @Override
     public void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        postInvalidateOnAnimation();
 
         canvas.drawARGB(255, 255, 255, 255);
 
